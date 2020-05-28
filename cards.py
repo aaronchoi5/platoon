@@ -16,6 +16,6 @@ class Deck:
 	def shuffle(self):
 		random.shuffle(self.cards)
 class Pile:
-	def __init__(self):
+	def __init__(self, pileId):
 		self.cards = []
-		self.id = uuid.uuid4()
+		self.id = pileId

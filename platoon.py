@@ -1,16 +1,14 @@
 import random
 import cards
+import winlossstate
 
 class Player:
 	def __init__(self, cards):
 		self.cards = cards
 		self.firstPlayer = False
-		self.pile1 = Pile()
-		self.pile2 = Pile()
-		self.pile3 = Pile()
-		self.pile4 = Pile()
-		self.pile5 = Pile()
-		#guid for security?
+		self.piles = [Pile(1), Pile(2), Pile(3), Pile(4), Pile(5)]
+		self.authorized = False
+
 	def getCards():
 		return self.cards
 
@@ -37,12 +35,17 @@ class Game:
 			r.determineFirst()
 			turn = 0 if self.playerA.firstPlayer else 1
 
+			fightsWonA = 0
+			fightsWonB = 0
 			for trickNum in range(5):
 				if turn % 2 == 0:
-					#playerA fights FE provides guid for both
+					playerA.authorized = True
+					playerB.authorized = False
+					#wait for player A's fight
+					#playerA fights FE provides pileid for both fightsWinA +=1 if WIN or fightsWinB += 1 if LOSS or nothing if DRAW
 				else:
-					#playerB fights
-				turn += 1
+					#playerB fights fightsWinB +=1 if WIN or fightsWinA += 1 if LOSS or nothing if DRAW
+					turn += 1
 
 	class Round:
 		def determineFirst(self):
@@ -57,37 +60,67 @@ class Game:
 			else:
 				self.playerB.firstPlayer = True
 
-		def assignCardsToPiles(pile1, pile2, pile3, pile4, pile5):
+
+		#@app.route('/page/<username>')
+		def assignCardsToPiles(piles):
 			#post request most likely id part of route?
 			if True:
-				self.playerA.pile1.cards = pile1
-				self.playerA.pile2.cards = pile2
-				self.playerA.pile3.cards = pile3
-				self.playerA.pile4.cards = pile4
-				self.playerA.pile5.cards = pile5
+				for i in range(5):
+					self.playerA.piles[i].cards = piles[i]
 				self.playerA.cards = []
 			else:
-				self.playerB.pile1.cards = pile1
-				self.playerB.pile2.cards = pile2
-				self.playerB.pile3.cards = pile3
-				self.playerB.pile4.cards = pile4
-				self.playerB.pile5.cards = pile5
+				for i in range(5):
+					self.playerB.piles[i].cards = piles[i]
 				self.playerB.cards = []
 
 			#return true
 		def fight(pileA, pileB):
 			#TODO do i pass in pile id's?
+			#TODO check if player is authorized?
+
 			#check for specials in pile A and pileB 
 			#13 should be wizard, 12 should be king, 11 should be Queen, 10 = Jack, 9 = 10, ...,  0 = ace
-			#resolve wizard
-			#if 13 in pileA:  pileA, pileB = pileB, pileA
-			#if 13 in pileB:  pileA, pileB = pileB, pileA
-			#if 12 in both check for higher values
-			#if 12 in pileA: checkForAce if ace in PileB B wins vice versa
-			#if 12 in pileB: as above
-			#if ace in both check for higher values if none than it's a tie
+			#resolve wizard wizard swaps piles
+			if 13 in pileA and 13 in pileB:
+				pass
+			elif 13 in pileA:
+				pileA, pileB = pileB, pileA
+
+			elif 13 in pileB:
+				pileA, pileB = pileB, pileA
+			#king autowins unless facing an ace
+			if 12 in pileA and 12 in pileB:
+				return self.computeWinnerBasedOnCards(pileA, pileB)
+			if 12 in PileB:
+				if 0 in PileA:
+					return winlossstate.WIN
+			if 12 in pileA:
+				if 0 in PileB:
+					return winlossstate.LOSS
+			if 0 in pileA and 0 in pileB:
+				return self.computeWinnerBasedOnCards(pileA, pileB)
 			#if ace in one or the other it loses
-			#total up cards in each pile and see which one is higher
+			if 0 in pileA:
+				return winlossstate.LOSS
+			if 0 in pileB:
+				return winlossstate.WIN
+			return self.computeWinnerBasedOnCards(pileA, pileB)
+
+		def computeWinnerBasedOnCards(pileA, pileB):
+			sumA = 0
+			sumB = 0
+			for a in pileA:
+				if a != 13:
+					sumA += a
+			for b in pileB:
+				if b != 13:
+					sumB += b
+			if a > b:
+				return winlossstate.WIN
+			elif a < b:
+				return winlossstate.LOSS
+			else:
+				return winlossstate.DRAW
 
 
 g = Game()

@@ -21,6 +21,7 @@ class Game:
 		self.playerB = Player(self.deck.cards[10:20])
 		self.deck.cards = self.deck.cards[20:]
 		self.roundsLeft = numOfRounds
+		self.trick = 0
 	#initialize properties and change them with each appropriate method?
 
 	def resetDeck(self):
@@ -33,14 +34,17 @@ class Game:
 	#@app.route('/page/<username>')
 	def assignCardsToPiles(piles):
 		#post request most likely id part of route?
-		if playerA.sessionid:
+		if playerA.username
 			for i in range(5):
 				self.playerA.piles[i].cards = piles[i]
 			self.playerA.cards = []
+			#write to db after all this
 		else:
 			for i in range(5):
 				self.playerB.piles[i].cards = piles[i]
 			self.playerB.cards = []
+			
+	#check that both piles have been assigned
 	def pilesAreAssigned(self):
 		for a in playerA.piles:
 			if len(a.cards) < 1:
@@ -59,9 +63,10 @@ class Game:
 		#get requests to get player's cards so we can display them on screen
 
 		if self.roundsLeft <= 0:
+			#placerholder line
 			print("b")
 		self.resetDeck()
-		self.assignCardsToPiles()
+
 		r.determineFirst()
 
 
@@ -71,9 +76,6 @@ class Game:
 		fightsWonB = 0
 		#might have to convert this to state based?
 		#maybe use a timer?
-
-		self.trick = 0
-
 
 		for trickNum in range(5):
 			if turn % 2 == 0:
@@ -112,6 +114,7 @@ class Game:
 	def fight(pileA, pileB):
 		#TODO do i pass in pile id's?
 		#TODO check if player is authorized?
+		#TODO flip the authorization if authorization is valid
 
 		#check for specials in pile A and pileB 
 		#13 should be wizard, 12 should be king, 11 should be Queen, 10 = Jack, 9 = 10, ...,  0 = ace

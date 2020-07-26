@@ -30,16 +30,41 @@ app.config['MONGODB_HOST'] = 'mongodb://localhost:27017/examples'
 db.init_app(app)
 CORS(app, support_credentials=True)
 
+clients = {}
+
 @socketio.on('connect')
 def test_connect():
 	send('after connect')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    send('Client disconnected')
+    clients.pop(request.sid)
+
+
+@socketio.on('user session registration')
+def register_session(username):
+	clients[username] = request.sid
+
+@socketio.on('user challenge')
+def challenge(payload):
+	recipient_session_id = clients[payload['challengee_username']]
+	print(payload['challenger_username'] + ' vs ' + payload['challengee_username'])
+	socketio.emit('challenge', payload['challenger_username'], room=recipient_session_id)
 
 @socketio.on('active users')
 def handle_users():
     users = User.objects()
     players = [user.username for user in users] 
     emit( players)
-    
+
+@socketio.on('get username')
+def get_user_name():
+	for client in clients:
+		sId = clients[client]
+		if sId == request.sid:
+			emit('challenge', room=sId)
+
 @app.route("/login", methods=["POST"])
 def login():
 	#fe sends username and password check those against db
@@ -63,6 +88,7 @@ def register():
 	username = request_json.get('username')
 	password = request_json.get('password')
 	encryptedPassword = returnEncryptedText(password)
+	#if user exists return something that says they exist
 	user = User(username = username, wins = 0, losses = 0, password = encryptedPassword)
 	user.save()
 	print(encryptedPassword)
@@ -106,19 +132,18 @@ def checkEncryptedText(encryptedText):
 	translatedResult = bytearray.fromhex(result).decode()
 	return translatedResult
 
-@app.route("/lookForGame", methods=["POST"])
-def postGames():
-	request_json = request.get_json()
-	username = request_json.get('username')
+@socketio.on('host game')
+def hostGames(username):
 	gameQueue = LookingForGame(username = username)
 	gameQueue.save()
 	#emit looking for game users event to update lobby
 	updateLobby()
-	return ''
+	print('host games works')
 
 @socketio.on('looking for game users')
 def returnPlayersLookingForGames():
 	updateLobby()
+
 
 def updateLobby():
 	gameQueue = LookingForGame.objects()
@@ -129,6 +154,7 @@ def updateLobby():
 def xxxx():
 	socketio.emit('looking for game users', ["sssss","a", "ree"])
 	return ''
+
 @app.route("/start")
 def startGame():
 	#maybe use uuid as part of route?

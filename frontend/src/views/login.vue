@@ -4,6 +4,7 @@
         <input type="text" name="username" v-model="input.username" placeholder="Username" />
         <input type="password" name="password" v-model="input.password" placeholder="Password" />
         <button type="button" v-on:click="login()">Login</button>
+        <p v-on:click="register()">Sign Up</p>
     </div>
 </template>
 
@@ -28,23 +29,18 @@ import io from 'socket.io-client';
                 axios({ method: "POST", "url": "http://127.0.0.1:5000/login", "data": this.input, "headers": { "content-type": "application/json, Authorization" } }).then(result => {
                     if(result.status == 200){
                         this.$emit("authenticated", true);
+                        this.$store.commit('assignUser', this.input.username)
+                        
                         this.$router.replace({ name: "secure" });
                     }
                     this.response = result.data;
                 }, error => {
                     console.error(error);
                 });
+            },
+            register(){
+                this.$router.replace({name: "register"})
             }
-        },
-        created: function(){
-            console.log("yooo");
-            this.connection = io.connect('http://127.0.0.1:5000');
-            this.connection.send('salutations')
-
-            this.connection.on('connect', () => {
-              console.log('Successfully connected!');
-            });
-
         }
     }
 </script>
@@ -57,5 +53,8 @@ import io from 'socket.io-client';
         margin: auto;
         margin-top: 200px;
         padding: 20px;
+    }
+    p{
+        color:blue;
     }
 </style>

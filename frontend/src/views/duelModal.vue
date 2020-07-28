@@ -1,8 +1,8 @@
 <template>
-  <div id ="myModal" class="modal">
-    <div class="modal-content">You are challenging user {{ data }}. Are you sure about this?
+  <div id ="duelModal" class="modal">
+    <div class="modal-content">You are have been challenged by {{ data }}. Accept?
       <span class="close" @click="$emit('close')">&times;</span>
-      <button @click="sendChallenge">Yes</button>
+      <button @click="acceptChallenge">Yes</button>
       <button @click="$emit('close')">No</button>
     </div>
   </div>
@@ -12,9 +12,9 @@
 export default {
     props: ['data', 'connection'],
     methods: {
-            sendChallenge(){
+            acceptChallenge(){
               this.$emit('close')
-              this.$emit('userChallenge', {'challengee_username': this.data, 'challenger_username': this.$store.state.username})
+              this.connection.emit('set up game', {'challengee_username': this.$store.state.username, 'challenger_username': this.data})
             }
         }
 }

@@ -13,6 +13,7 @@ import random
 import os
 import sys
 import eventlet
+import json
 
 
 # initialize instance of WSGI application
@@ -41,10 +42,17 @@ def handle_disconnect():
     send('Client disconnected')
     clients.pop(request.sid)
 
-
 @socketio.on('user session registration')
 def register_session(username):
 	clients[username] = request.sid
+
+@socketio.on('host game')
+def hostGames(username):
+	gameQueue = LookingForGame(username = username)
+	gameQueue.save()
+	#emit looking for game users event to update lobby
+	updateLobby()
+	print('host games works')
 
 @socketio.on('user challenge')
 def challenge(payload):
@@ -132,18 +140,9 @@ def checkEncryptedText(encryptedText):
 	translatedResult = bytearray.fromhex(result).decode()
 	return translatedResult
 
-@socketio.on('host game')
-def hostGames(username):
-	gameQueue = LookingForGame(username = username)
-	gameQueue.save()
-	#emit looking for game users event to update lobby
-	updateLobby()
-	print('host games works')
-
 @socketio.on('looking for game users')
 def returnPlayersLookingForGames():
 	updateLobby()
-
 
 def updateLobby():
 	gameQueue = LookingForGame.objects()
@@ -155,21 +154,67 @@ def xxxx():
 	socketio.emit('looking for game users', ["sssss","a", "ree"])
 	return ''
 
-@app.route("/start")
-def startGame():
-	#maybe use uuid as part of route?
+@socketio.on('set up game')
+def setUpGame(payload):
+	playerAName = payload['challengee_username']
+	playerBName = payload['challenger_username']
 	deck = Deck()
 	deck.shuffle()
-	playerA = Player(deck.cards[:10])
-	playerB = Player(deck.cards[10:20])
+	authorized = True if random.randint(0,1) == 0 else False
+	playerA = Player(deck.cards[:10], playerAName, authorized)
+	playerB = Player(deck.cards[10:20], playerBName, not authorized)
 	remainingCards = deck.cards[20:]
 	playerAbytes = pickle.dumps(playerA)
 	playerBbytes = pickle.dumps(playerB)
 	remainingCardsBytes = pickle.dumps(remainingCards)
+	gameId = uuid.uuid4()
 
-	game = Game(gameID= uuid.uuid4(), remDeck = Binary(remainingCardsBytes), playerADataField = Binary(playerAbytes), playerBDataField = Binary(playerBbytes), roundsLeft = 5, trickNum = 0)
+	game = Game(gameID= gameId, remDeck = Binary(remainingCardsBytes), playerADataField = Binary(playerAbytes), playerBDataField = Binary(playerBbytes), roundsLeft = 5, trickNum = 0)
 	game.save()
-	return ''
+	recipient_session_idA = clients[playerAName]
+	recipient_session_idB = clients[playerBName]
+
+	emit('go to game view', str(gameId), room=recipient_session_idA)
+	emit('go to game view', str(gameId), room=recipient_session_idB)#maybe store this in store for use in frontend
+
+@socketio.on('get player cards')
+def getCards(payload):
+	username = payload['username']
+	gameId = payload['gameId']
+	games = Game.objects(gameID = gameId)
+
+	dataA = [game.playerADataField for game in games]
+	binDataA = dataA[0]
+
+	dataB = [game.playerBDataField for game in games]
+	binDataB = dataB[0]
+
+	playerA = pickle.loads(binDataA)
+	playerB = pickle.loads(binDataB)
+	recipient_session_id = clients[username]
+
+	if username == playerA.name:
+		playerACards = playerA.cards
+		playerACardsList = []
+		for card in playerACards:
+			jsonStrA = json.dumps(card.__dict__)
+			playerACardsList.append(jsonStrA)
+		emit('assign cards', playerACardsList, room = recipient_session_id)
+		print('playerA emitted')
+	elif username == playerB.name:
+		playerBCards = playerB.cards
+		playerBCardsList = []
+		for card in playerBCards:
+			jsonStrB = json.dumps(card.__dict__)
+			playerBCardsList.append(jsonStrB)
+		emit('assign cards', playerBCardsList, room = recipient_session_id)
+		print('playerB emitted')
+	else:
+		print('Something is up.')
+
+	print('it ran')
+	print('username: ' + username + 'playerA: ' + playerA.name + 'playerB: ' + playerB.name)
+
 
 @app.route("/deserialize/<gameid>")
 def deserialize():
@@ -188,6 +233,7 @@ def deserialize():
 	print(remaining)
 	return ""
 
+#convert to private method where called if turn/trick count is a certain num?
 @app.route("/resetDeck/<gameId>/<player>")
 def resetDeck():
 	g  = Game.objects(gameId = gameId)

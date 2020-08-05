@@ -8,9 +8,9 @@ class Card:
 class Deck:
 	def __init__(self):
 		self.cards = []
-		colors = ['heart', 'spades']
+		colors = ['hearts', 'spades']
 		for c in colors:
-			for i in range(15):
+			for i in range(14):
 				self.cards.append(Card(i, c))
 
 	def shuffle(self):

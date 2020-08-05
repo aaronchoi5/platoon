@@ -86,8 +86,8 @@ def login():
 	passW = user[0].password
 	if checkEncryptedText(passW).rstrip() == password:
 		return ''
-
-	return ''
+	else:
+		return "Wrong username/password", 403
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -148,11 +148,6 @@ def updateLobby():
 	gameQueue = LookingForGame.objects()
 	players = [game.username for game in gameQueue] 
 	emit('looking for game users', players)
-
-@app.route("/test")
-def xxxx():
-	socketio.emit('looking for game users', ["sssss","a", "ree"])
-	return ''
 
 @socketio.on('set up game')
 def setUpGame(payload):
@@ -215,6 +210,38 @@ def getCards(payload):
 	print('it ran')
 	print('username: ' + username + 'playerA: ' + playerA.name + 'playerB: ' + playerB.name)
 
+@socketio.on('assign piles')
+def assignPiles(payload):
+	username = payload['username']
+	gameId = payload['gameId']
+	games = Game.objects(gameID = gameId)
+
+	dataA = [game.playerADataField for game in games]
+	binDataA = dataA[0]
+
+	dataB = [game.playerBDataField for game in games]
+	binDataB = dataB[0]
+
+	playerA = pickle.loads(binDataA)
+	playerB = pickle.loads(binDataB)
+	recipient_session_id = clients[username]
+	piles = payload['piles']
+
+	if username == playerA.name:
+		for i in range(5):
+			playerA.piles[i].cards = piles[i]
+		#TODO: update database somehow 
+		#TODO maybe run method that'll emit certain event that'll trigger if both have assigned piles else emit event that'll say to wait
+		print('playerA emitted') 
+		print(playerA.piles[0].cards)
+	elif username == playerB.name:
+		for i in range(5):
+			playerB.piles[i].cards = piles[i] 
+		emit('todo', room = recipient_session_id)
+		print('playerB emitted')
+		print(playerA.piles[0].cards)
+	else:
+		print('Something is up.')
 
 @app.route("/deserialize/<gameid>")
 def deserialize():
@@ -247,17 +274,6 @@ def resetDeck():
 		g = Game.objects(gameId = gameId).update(remDeck = rem, playerA = pA, playerB = pB, roundsleft = roundsleft-1, trickNum = 0)
 
 
-@app.route("/<gameId>/assign/<player>")
-def assignCards(piles):
-	#piles will be a json array with cards in them
-	g = Game.objects(gameId = gameId)
-
-	if player == "a":
-		for i in range(5):
-			g.pA.piles[i] = piles[i]
-	else:
-		for i in range(5):
-			g.pB.piles[i] = piles[i]
 
 @app.route("/<gameId>/checkBothAssigned")
 def pilesAreAssigned():

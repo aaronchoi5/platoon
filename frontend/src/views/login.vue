@@ -33,6 +33,9 @@ import io from 'socket.io-client';
                         
                         this.$router.replace({ name: "secure" });
                     }
+                    else{
+                        console.log(result.data)
+                    }
                     this.response = result.data;
                 }, error => {
                     console.error(error);

@@ -3,5 +3,4 @@ class Enum(set):
         if name in self:
             return name
         raise AttributeError
-WinLossState = Enum(["WIN", "LOSS", "DRAW"])
-print(WinLossState.WIN)
+winlossstate = Enum(["WIN", "LOSS", "DRAW"])

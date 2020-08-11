@@ -30,7 +30,7 @@ export default {
     height: 120px;
     width: 70px;
     display: inline-block;
-    margin-bottom: -6rem;
+    margin-bottom: -7.5rem;
 
   }
 </style>

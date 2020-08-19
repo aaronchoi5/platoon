@@ -3,8 +3,10 @@
         <h1>Game View</h1>
         <h2> wins: {{wins}} losses: {{losses}} draws: {{draws}}</h2>
         <button v-on:click="submitPiles()">Show me your moves!</button>
-        <button v-on:click="test()">Test</button>
-        <battleModal v-if="battleModalVisible" :connection=this.connection @close="battleModalVisible = false" :data="combatants"/>
+        <h3 v-if="authorized == false && submitted">Waiting for opponent to make a move</h3>
+        <battleModal v-if="battleModalVisible" :connection=this.connection @close="battleModalVisible = false" :data="combatants" :authorized="authorized" @nturn="myFunction"/>
+        <gameOverModal v-if="gameover" :result="result"/>
+        <snackbar></snackbar>
             <div style="display: flex; justify-content: space-evenly">
                 <div id="o1" style='display: inline-block' @click="assignOPile(0)">
                     <img v-for= "index in oPile0" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
@@ -23,29 +25,9 @@
                 </div>
             </div>
             <div style="display: flex; justify-content: space-evenly; margin-top: 6rem;">
-                <div  @click="assignCPile(0)">
-                    <CardHolder id="c1" @carddrop="assign">
-                        <Card v-for="(card,index) in pile0" :card="card" :key="card.id" :draggable="true" :id="index" style="display: block"/>
-                    </CardHolder>
-                </div>
-                <div  @click="assignCPile(1)">
-                    <CardHolder id="c2" @carddrop="assign" @click="assignCPile(1)">
-                        <Card v-for="(card,index) in pile1" :card="card" :key="card.id" :draggable="true" :id="index" style="display: block"/>
-                    </CardHolder>
-                </div>
-                <div  @click="assignCPile(2)">
-                    <CardHolder id="c3" @carddrop="assign" @click="assignCPile(2)">
-                        <Card v-for="(card,index) in pile2" :card="card" :key="card.id" :draggable="true" :id="index" style="display: block"/>
-                    </CardHolder>
-                </div>
-                <div  @click="assignCPile(3)">
-                    <CardHolder id="c4" @carddrop="assign" @click="assignCPile(3)">
-                        <Card v-for="(card,index) in pile3" :card="card" :key="card.id" :draggable="true" :id="index" style="display: block"/>
-                    </CardHolder>
-                </div>
-                <div  @click="assignCPile(4)">
-                    <CardHolder id="c5" @carddrop="assign" @click="assignCPile(4)">
-                        <Card v-for="(card,index) in pile4" :card="card" :key="card.id" :draggable="true" :id="index" style="display: block"/>
+                <div v-for="(pile, pIndex) in piles" @click="assignCPile(pIndex)">
+                    <CardHolder :id="getId(pIndex)" @carddrop="assign">
+                        <Card v-for="(card,index) in pile" :card="card" :key="card.id" :draggable="true" :id="index" style="display: block"/>
                     </CardHolder>
                 </div>
             </div>
@@ -56,29 +38,27 @@
 </template>
 
 <script>
-import Card from '../components/Card.vue';
-import CardHolder from '../components/CardHolder.vue'
-import Board from '../components/Board.vue'
-import battleModal from '@/views/battleModal.vue';
-import draggable from 'vuedraggable';
+import Card from '@/components/Card.vue';
+import CardHolder from '@/components/CardHolder.vue'
+import Board from '@/components/Board.vue'
+import battleModal from '@/components/battleModal.vue';
+import snackbar from '@/components/snackbar.vue'
+import gameOverModal from '@/components/gameOverModal.vue'
     export default {
         components : {
             battleModal,
             Board,
             Card,
             CardHolder,
-            draggable
+            snackbar,
+            gameOverModal
         },
         data(){
             return {
-                authorized: null,
+                authorized: false,
                 connection: null,
                 cards: [],
-                pile0: [],
-                pile1: [],
-                pile2: [],
-                pile3: [],
-                pile4: [],
+                piles: [[], [], [], [], []],
                 oPile0: 0,
                 oPile1: 0,
                 oPile2: 0,
@@ -88,13 +68,15 @@ import draggable from 'vuedraggable';
                 opponentPile: -1,
                 battleModalVisible: false,
                 combatants: [-1, -1],
+                submitted: false,
                 wins: 0,
                 losses: 0,
-                draws: 0
+                draws: 0,
+                gameover: false,
+                result: null 
             }
         },
         created: function(){
-            
             this.connection = this.$store.state.connection
             this.connection.on('assign cards', (cards) => {
                 for(var card in cards){
@@ -116,15 +98,15 @@ import draggable from 'vuedraggable';
                 this.oPile2 = pileLengths[2]
                 this.oPile3 = pileLengths[3]
                 this.oPile4 = pileLengths[4]
+                this.submitted = true
             });
+
             this.connection.on('loss', (payload) =>{
+                this.authorized = payload['authorized']
                 let pilesA = payload['pilesA']
-                this.pile0 = pilesA[0]
-                this.pile1 = pilesA[1]
-                this.pile2 = pilesA[2]
-                this.pile3 = pilesA[3]
-                this.pile4 = pilesA[4]
-
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = pilesA[i]
+                }
                 let pileLengths = payload['pilesB']
                 this.oPile0 = pileLengths[0]
                 this.oPile1 = pileLengths[1]
@@ -136,14 +118,13 @@ import draggable from 'vuedraggable';
                 this.opponentPile = -1
                 this.losses += 1
             });
+
             this.connection.on('win', (payload) =>{
+                this.authorized = payload['authorized']
                 let pilesA = payload['pilesA']
-                this.pile0 = pilesA[0]
-                this.pile1 = pilesA[1]
-                this.pile2 = pilesA[2]
-                this.pile3 = pilesA[3]
-                this.pile4 = pilesA[4]
-
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = pilesA[i]
+                }
                 let pileLengths = payload['pilesB']
                 this.oPile0 = pileLengths[0]
                 this.oPile1 = pileLengths[1]
@@ -154,60 +135,13 @@ import draggable from 'vuedraggable';
                 this.chosenPile = -1
                 this.opponentPile = -1
                 this.wins += 1
-            });
-            this.connection.on('win reset', (newCards) =>{
-                for(var card in newCards){
-                    var temp = JSON.parse(newCards[card]);
-                    this.cards.push(temp);
-                }
-                this.oPile0 = 0
-                this.oPile1 = 0
-                this.oPile2 = 0
-                this.oPile3 = 0
-                this.oPile4 = 0
-                this.pile0 = []
-                this.pile1 = []
-                this.pile2 = []
-                this.pile3 = []
-                this.pile4 = []
-
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
-                this.wins += 1
-            });
-            this.connection.on('loss reset', (newCards) =>{
-                for(var card in newCards){
-                    var temp = JSON.parse(newCards[card]);
-                    this.cards.push(temp);
-                }
-
-                this.oPile0 = 0
-                this.oPile1 = 0
-                this.oPile2 = 0
-                this.oPile3 = 0
-                this.oPile4 = 0
-                this.pile0 = []
-                this.pile1 = []
-                this.pile2 = []
-                this.pile3 = []
-                this.pile4 = []
-
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
-                this.losses += 1
-            });
-            this.connection.on('game over', (payload) =>{
-                console.log('waiting')
             });
             this.connection.on('draw', (payload) =>{
+                this.authorized = payload['authorized']
                 let pilesA = payload['pilesA']
-                this.pile0 = pilesA[0]
-                this.pile1 = pilesA[1]
-                this.pile2 = pilesA[2]
-                this.pile3 = pilesA[3]
-                this.pile4 = pilesA[4]
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = pilesA[i]
+                }
 
                 let pileLengths = payload['pilesB']
                 this.oPile0 = pileLengths[0]
@@ -218,7 +152,78 @@ import draggable from 'vuedraggable';
                 this.combatants[0] = this.combatants[1] = -1
                 this.chosenPile = -1
                 this.opponentPile = -1
-                this.draw += 1
+                this.draws += 1
+            });
+            this.connection.on('win reset', (payload) =>{
+                this.authorized = payload['authorized']
+                let newCards = payload['newCards']
+                for(var card in newCards){
+                    var temp = JSON.parse(newCards[card]);
+                    this.cards.push(temp);
+                }
+                this.oPile0 = 0
+                this.oPile1 = 0
+                this.oPile2 = 0
+                this.oPile3 = 0
+                this.oPile4 = 0
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = []
+                }
+
+                this.combatants[0] = this.combatants[1] = -1
+                this.chosenPile = -1
+                this.opponentPile = -1
+                this.wins += 1
+                this.submitted = false
+            });
+
+            this.connection.on('loss reset', (payload) =>{
+                this.authorized = payload['authorized']
+                let newCards = payload['newCards']
+                for(var card in newCards){
+                    var temp = JSON.parse(newCards[card]);
+                    this.cards.push(temp);
+                }
+                this.oPile0 = 0
+                this.oPile1 = 0
+                this.oPile2 = 0
+                this.oPile3 = 0
+                this.oPile4 = 0
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = []
+                }
+
+                this.combatants[0] = this.combatants[1] = -1
+                this.chosenPile = -1
+                this.opponentPile = -1
+                this.losses += 1
+                this.submitted = false
+            });
+            
+            this.connection.on('draw reset', (payload) =>{
+                this.authorized = payload['authorized']
+                let newCards = payload['newCards']
+                for(var card in newCards){
+                    var temp = JSON.parse(newCards[card]);
+                    this.cards.push(temp);
+                }
+                this.oPile0 = 0
+                this.oPile1 = 0
+                this.oPile2 = 0
+                this.oPile3 = 0
+                this.oPile4 = 0
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = []
+                }
+                this.combatants[0] = this.combatants[1] = -1
+                this.chosenPile = -1
+                this.opponentPile = -1
+                this.draws += 1
+                this.submitted = false
+            });
+            this.connection.on('game over', (result) =>{
+                this.gameover = true
+                this.result = result
             });
         },
         methods:{
@@ -229,39 +234,24 @@ import draggable from 'vuedraggable';
                 let card = {"value":parseInt(value), "suit":suit}
                 this.deleteInstancesOfCard(card)
 
-                switch(pileId){
-                    case "c1":
-                        this.pile0.push(card)
-                        this.deleteCardFromPile(this.cards,JSON.stringify(card))
-                        break;
-                    case "c2":
-                        this.pile1.push(card)
-                        this.deleteCardFromPile(this.cards,JSON.stringify(card))
-                        break;
-                    case "c3":
-                        this.pile2.push(card)
-                        this.deleteCardFromPile(this.cards,JSON.stringify(card))
-                        break;
-                    case "c4":
-                        this.pile3.push(card)
-                        this.deleteCardFromPile(this.cards,JSON.stringify(card))
-                        break;
-                    case "c5":
-                        this.pile4.push(card)
-                        this.deleteCardFromPile(this.cards,JSON.stringify(card))
-                        break;
-                    case "board-2":
-                        this.cards.push(card)
-                        break;
+                if(pileId == "board-2"){
+                    this.cards.push(card)
                 }
+                else{
+                    this.piles[pileId].push(card)
+                    this.deleteCardFromPile(this.cards,JSON.stringify(card))
+                }
+            },
+            getId(index){
+                return index
             },
             deleteInstancesOfCard(object){
                 var jsonobj = JSON.stringify(object)
-                this.deleteCardFromPile(this.pile0,jsonobj)
-                this.deleteCardFromPile(this.pile1,jsonobj)
-                this.deleteCardFromPile(this.pile2,jsonobj)
-                this.deleteCardFromPile(this.pile3,jsonobj)
-                this.deleteCardFromPile(this.pile4,jsonobj)
+                this.deleteCardFromPile(this.piles[0],jsonobj)
+                this.deleteCardFromPile(this.piles[1],jsonobj)
+                this.deleteCardFromPile(this.piles[2],jsonobj)
+                this.deleteCardFromPile(this.piles[3],jsonobj)
+                this.deleteCardFromPile(this.piles[4],jsonobj)
             },
             deleteCardFromPile(pile, jsonobj){
                 for(let i = 0; i < pile.length; i++){
@@ -271,7 +261,7 @@ import draggable from 'vuedraggable';
                 }
             },
             submitPiles(){
-                this.connection.emit('assign piles', {'username': this.$store.state.username, 'gameId': this.$store.state.gameId, 'piles': [this.pile0, this.pile1, this.pile2, this.pile3, this.pile4]})
+                this.connection.emit('assign piles', {'username': this.$store.state.username, 'gameId': this.$store.state.gameId, 'piles': [this.piles[0], this.piles[1], this.piles[2], this.piles[3], this.piles[4]]})
             },
             assignOPile(pileId){
                 this.opponentPile = pileId
@@ -289,8 +279,17 @@ import draggable from 'vuedraggable';
                     this.battleModalVisible = true;
                 }
             },
-            test(){
-                this.connection.emit('test', {'username': this.$store.state.username, 'gameId': this.$store.state.gameId})
+            myFunction() {
+                // Get the snackbar DIV
+                var x = document.getElementById("snackbar");
+
+                // Add the "show" class to DIV
+                x.className = "show";
+
+                // After 3 seconds, remove the show class from DIV
+                setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+                this.chosenPile = -1
+                this.opponentPile = -1
             }
         }
     }

@@ -15,8 +15,8 @@
 <script>
 import axios from "axios";
 import io from 'socket.io-client';
-import myModal from '@/views/myModal';
-import duelModal from '@/views/duelModal';
+import myModal from '@/components/myModal';
+import duelModal from '@/components/duelModal';
     export default {
         components:{
             myModal,

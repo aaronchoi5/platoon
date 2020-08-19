@@ -1,6 +1,5 @@
 <template>
   <div>
-    
     <a :id="id" class="cardHolder" @dragover.prevent @drop.prevent="drop" href="#" >
         <img class="imgCardHolder" v-bind:src= "require('../assets/cardframe.png')" width="70" height="120"/>
           <slot />
@@ -9,15 +8,11 @@
 </template>
 
 <script>
-import testModal from '@/views/testModal';
 export default {
     data(){
       return{
         showTestModal: false
       }
-    },
-    components:{
-        testModal
     },
     props:['id'],
     methods: {

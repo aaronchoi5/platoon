@@ -10,12 +10,19 @@
 
 <script>
 export default {
-    props: ['data', 'connection'],
+    props: ['data', 'connection', 'authorized'],
     methods: {
             startBattle(){
-              this.$emit('close')
-              console.log(this.data)
-              this.connection.emit('fight', {'battlingPiles': this.data, 'username': this.$store.state.username, 'gameId': this.$store.state.gameId})
+              if (this.authorized){
+                this.$emit('close')
+                console.log(this.data)
+                this.connection.emit('fight', {'battlingPiles': this.data, 'username': this.$store.state.username, 'gameId': this.$store.state.gameId})
+              }
+              else{
+                this.$emit('close')
+                this.$emit('nturn')
+              }
+              
             }
         }
 }

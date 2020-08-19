@@ -16,7 +16,6 @@ import eventlet
 import json
 from winlossstate import winlossstate
 
-
 # initialize instance of WSGI application
 # act as a central registry for the view functions, URL rules, template configs
 async_mode = None
@@ -274,7 +273,6 @@ def startFight(payload):
 	recipient_session_id = clients[username]
 	games = Game.objects(gameID = gameId)
 	game = games.get(gameID = gameId)
-
 #refactor this mess later
 	binDataA = game.playerADataField
 	binDataB = game.playerBDataField
@@ -294,35 +292,27 @@ def startFight(payload):
 			pileB.append(card['value'])
 
 		winlossA = fight(pileA, pileB)
-		if game.roundsLeft == 0 and trickNum == 4:
-			 emit('game over')#emit game over and send results wins losses draws and use that to determine who won or if draw
+		if game.roundsLeft == 0 and game.trickNum == 4:
+			if winlossA == winlossstate.WIN:
+					playerA.tricksWon += 1
+			elif winlossA == winlossstate.LOSS:
+					playerB.tricksWon += 1
+
+			if playerA.roundsWon < playerB.roundsWon:
+				emit('game over', "lost", room = recipient_session_id)
+				emit('game over', "won", room = opponent_session_id)
+			elif playerA.roundsWon > playerB.roundsWon:
+				emit('game over', "won", room = recipient_session_id)
+				emit('game over', "lost", room = opponent_session_id)
+			else:
+				emit('game over', "drew", room = recipient_session_id)
+				emit('game over', "drew", room = opponent_session_id)
 		else:
 			if game.trickNum == 4:
-				game.trickNum = -1
 				resetDeck(game, playerA, playerB)
-				playerACardsList = []
-				for card in playerA.cards:
-					jsonStrA = json.dumps(card.__dict__)
-					playerACardsList.append(jsonStrA)
-				playerBCardsList = []
-				for card in playerB.cards:
-					jsonStrB = json.dumps(card.__dict__)
-					playerBCardsList.append(jsonStrB)
-				emit('win reset', playerACardsList , room = recipient_session_id)
-				emit('loss reset', playerBCardsList , room = opponent_session_id)
+				resetHandling(playerA, playerB, recipient_session_id, opponent_session_id, winlossA)
 			else:
-				game.trickNum += 1
-				playerA.piles[pileAId].cards = []
-				playerB.piles[pileBId].cards = []
-				if winlossA == winlossstate.WIN:
-					emit('win', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room = recipient_session_id)
-					emit('loss', {"pilesA": [playerB.piles[0].cards, playerB.piles[1].cards, playerB.piles[2].cards, playerB.piles[3].cards, playerB.piles[4].cards], "pilesB": [len(playerA.piles[0].cards), len(playerA.piles[1].cards), len(playerA.piles[2].cards),len(playerA.piles[3].cards),len(playerA.piles[4].cards)]}, room  = opponent_session_id)
-				elif winlossA == winlossstate.LOSS:
-					emit('win', {"pilesA": [playerB.piles[0].cards, playerB.piles[1].cards, playerB.piles[2].cards, playerB.piles[3].cards, playerB.piles[4].cards], "pilesB": [len(playerA.piles[0].cards), len(playerA.piles[1].cards), len(playerA.piles[2].cards),len(playerA.piles[3].cards),len(playerA.piles[4].cards)]}, room = opponent_session_id)
-					emit('loss', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room = recipient_session_id)
-				else:
-					emit('draw', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room = recipient_session_id)
-					emit('draw', {"pilesA": [playerB.piles[0].cards, playerB.piles[1].cards, playerB.piles[2].cards, playerB.piles[3].cards, playerB.piles[4].cards], "pilesB": [len(playerA.piles[0].cards), len(playerA.piles[1].cards), len(playerA.piles[2].cards),len(playerA.piles[3].cards),len(playerA.piles[4].cards)]}, room = opponent_session_id)
+				fightHandling(game, playerA, playerB, pileAId, pileBId, recipient_session_id, opponent_session_id, winlossA)
 	else:
 		pileAId = battlingPiles[1]
 		pileBId = battlingPiles[0]
@@ -337,30 +327,76 @@ def startFight(payload):
 		playerA.piles[pileAId].cards = []
 		playerB.piles[pileBId].cards = []
 
-		if winlossB == winlossstate.WIN:
-			game.trickNum += 1
-			emit('win', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room = recipient_session_id)
-			emit('loss', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room  = opponent_session_id)
-		elif winlossB == winlossstate.LOSS:
-			game.trickNum += 1
-			emit('win', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room = recipient_session_id)
-			emit('loss', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room  = opponent_session_id)
+		if game.roundsLeft == 0 and game.trickNum == 4:
+			if winlossB == winlossstate.WIN:
+					playerB.tricksWon += 1
+			elif winlossB == winlossstate.LOSS:
+					playerB.tricksWon += 1
+			if playerA.roundsWon < playerB.roundsWon:
+				emit('game over', "lost", room = recipient_session_id)
+				emit('game over', "won", room = opponent_session_id)
+			elif playerA.roundsWon > playerB.roundsWon:
+				emit('game over', "won", room = recipient_session_id)
+				emit('game over', "lost", room = opponent_session_id)
+			else:
+				emit('game over', "drew", room = recipient_session_id)
+				emit('game over', "drew", room = opponent_session_id)
 		else:
-			game.trickNum += 1
-			emit('win', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room = recipient_session_id)
-			emit('loss', {"pilesA": [playerA.piles[0].cards, playerA.piles[1].cards, playerA.piles[2].cards, playerA.piles[3].cards, playerA.piles[4].cards], "pilesB": [len(playerB.piles[0].cards), len(playerB.piles[1].cards), len(playerB.piles[2].cards),len(playerB.piles[3].cards),len(playerB.piles[4].cards)]}, room  = opponent_session_id)
-
+			if game.trickNum == 4:
+				resetDeck(game, playerA, playerB)
+				resetHandling(playerB, playerA, recipient_session_id, opponent_session_id, winlossB)
+			else:
+				fightHandling(game, playerB, playerA, pileBId, pileAId, recipient_session_id, opponent_session_id, winlossB)
+	
+	playerA.authorized = not playerA.authorized
+	playerB.authorized = not playerB.authorized
 	game.playerADataField = Binary(pickle.dumps(playerA))
 	game.playerBDataField = Binary(pickle.dumps(playerB))
-
-	if game.roundsLeft == 0:
-		emit('results', room = recipient_session_id)
-		emit('results', room = opponent_session_id)
 	game.save()
+#wip think about using this in player b's case too to reduce lines of code?
+def resetHandling(player1, player2, recipient_session_id, opponent_session_id, winlossA):
+	player1CardsList = []
+	for card in player1.cards:
+		jsonStrA = json.dumps(card.__dict__)
+		player1CardsList.append(jsonStrA)
+	player2CardsList = []
+	for card in player2.cards:
+		jsonStrB = json.dumps(card.__dict__)
+		player2CardsList.append(jsonStrB)
+	if winlossA == winlossstate.WIN:
+		player1.tricksWon += 1
+		emit('win reset', {"authorized": not player1.authorized, "newCards": player1CardsList}, room = recipient_session_id)
+		emit('loss reset', {"authorized": not player2.authorized, "newCards": player2CardsList}, room = opponent_session_id)
+	elif winlossA == winlossstate.LOSS:
+		player2.tricksWon += 1
+		emit('win reset', {"authorized": not player2.authorized, "newCards": player2CardsList}, room = opponent_session_id)
+		emit('loss reset', {"authorized": not player1.authorized, "newCards": player1CardsList}, room = recipient_session_id)
+	else:
+		emit('draw reset', {"authorized": not player1.authorized, "newCards": player1CardsList}, room = recipient_session_id)
+		emit('draw reset', {"authorized": not player2.authorized, "newCards": player2CardsList}, room = opponent_session_id)
+	if player1.tricksWon > player2.tricksWon:
+		player1.roundsWon += 1
+	elif player2.tricksWon > player1.tricksWon:
+		player2.roundsWon += 1
+
+def fightHandling(game, player1, player2, pile1Id, pile2Id, recipient_session_id, opponent_session_id, winlossA):
+	game.trickNum += 1
+	game.save()
+	player1.piles[pile1Id].cards = []
+	player2.piles[pile2Id].cards = []
+	if winlossA == winlossstate.WIN:
+		player1.tricksWon += 1
+		emit('win', {"authorized": not player1.authorized, "pilesA": [player1.piles[0].cards, player1.piles[1].cards, player1.piles[2].cards, player1.piles[3].cards, player1.piles[4].cards], "pilesB": [len(player2.piles[0].cards), len(player2.piles[1].cards), len(player2.piles[2].cards),len(player2.piles[3].cards),len(player2.piles[4].cards)]}, room = recipient_session_id)
+		emit('loss', {"authorized": not player2.authorized, "pilesA": [player2.piles[0].cards, player2.piles[1].cards, player2.piles[2].cards, player2.piles[3].cards, player2.piles[4].cards], "pilesB": [len(player1.piles[0].cards), len(player1.piles[1].cards), len(player1.piles[2].cards),len(player1.piles[3].cards),len(player1.piles[4].cards)]}, room  = opponent_session_id)
+	elif winlossA == winlossstate.LOSS:
+		player2.tricksWon += 1
+		emit('win', {"authorized": not player2.authorized, "pilesA": [player2.piles[0].cards, player2.piles[1].cards, player2.piles[2].cards, player2.piles[3].cards, player2.piles[4].cards], "pilesB": [len(player1.piles[0].cards), len(player1.piles[1].cards), len(player1.piles[2].cards),len(player1.piles[3].cards),len(player1.piles[4].cards)]}, room = opponent_session_id)
+		emit('loss', {"authorized": not player1.authorized, "pilesA": [player1.piles[0].cards, player1.piles[1].cards, player1.piles[2].cards, player1.piles[3].cards, player1.piles[4].cards], "pilesB": [len(player2.piles[0].cards), len(player2.piles[1].cards), len(player2.piles[2].cards),len(player2.piles[3].cards),len(player2.piles[4].cards)]}, room = recipient_session_id)
+	else:
+		emit('draw', {"authorized": not player1.authorized, "pilesA": [player1.piles[0].cards, player1.piles[1].cards, player1.piles[2].cards, player1.piles[3].cards, player1.piles[4].cards], "pilesB": [len(player2.piles[0].cards), len(player2.piles[1].cards), len(player2.piles[2].cards),len(player2.piles[3].cards),len(player2.piles[4].cards)]}, room = recipient_session_id)
+		emit('draw', {"authorized": not player2.authorized, "pilesA": [player2.piles[0].cards, player2.piles[1].cards, player2.piles[2].cards, player2.piles[3].cards, player2.piles[4].cards], "pilesB": [len(player1.piles[0].cards), len(player1.piles[1].cards), len(player1.piles[2].cards),len(player1.piles[3].cards),len(player1.piles[4].cards)]}, room = opponent_session_id)
 
 def fight(pileA, pileB):
-	#use ids and assign appropriately
-
 	if 13 in pileA and 13 in pileB:
 		pass
 	elif 13 in pileA:
@@ -405,80 +441,29 @@ def computeWinnerBasedOnCards(pileA, pileB):
 	else:
 		return winlossstate.DRAW
 
-
-
 def pilesReady(piles):
 	for i in range(len(piles)):
 		if len(piles[i].cards) < 1:
 			return False
 	return True
 
-def resetDeck(game, playerA, playerB):
-
-
+def resetDeck(game, player1, player2):
 	deck = Deck()
 	deck.shuffle()
-	playerA.authorized = not playerA.authorized
-	playerB.authorized = not playerB.authorized
-	playerA.cards = deck.cards[:10]
-	playerB.cards = deck.cards[10:20]
+	player1.authorized = not player1.authorized
+	player2.authorized = not player2.authorized
+	player1.cards = deck.cards[:10]
+	player2.cards = deck.cards[10:20]
 	remainingCards = deck.cards[20:]
-	playerAbytes = pickle.dumps(playerA)
-	playerBbytes = pickle.dumps(playerB)
+	player1bytes = pickle.dumps(player1)
+	player2bytes = pickle.dumps(player2)
 	remainingCardsBytes = pickle.dumps(remainingCards)
-	game.playerADataField = playerAbytes
-	game.playerBDataField = playerBbytes
+	game.playerADataField = player1bytes
+	game.playerBDataField = player2bytes
 	game.remDeck = remainingCardsBytes
 	game.roundsLeft -= 1
+	game.trickNum = 0
 	game.save()
-	
-@app.route("/deserialize/<gameid>")
-def deserialize():
-	games = Game.objects(roundsLeft = 5)
-	rem = [game.remDeck for game in games]
-	playerA = [game.playerADataField for game in games]
-	binData = rem[0]
-	binDataA = playerA[0]
-	remaining = pickle.loads(binData)
-	for r in remaining:
-		print("Remaining Cards: ",r.suit, r.value)
-
-	playerADeserialized = pickle.loads(binDataA)
-	print("playerA: ", playerADeserialized.cards[0].suit, playerADeserialized.cards[0].value)
-	
-	print(remaining)
-	return ""
-
-@app.route("/<gameId>/checkBothAssigned")
-def pilesAreAssigned():
-	g = Game.objects(gameId = gameId)
-	playerA = g.playerA
-	playerB = g.playerB
-	for a in playerA.piles:
-			if len(a.cards) < 1:
-				return False
-	for b in playerB.piles:
-		if len(b.cards) < 1:
-			return False
-	return True
-
-@app.route("/<gameId>/roundsLeft")
-def roundsLeft():
-	g = Game.objects(gameId = gameId)
-	return g.rounds
-
-@app.route("/<gameId>/determineFirst")
-def determineFirst():
-	a, b = self.deck.cards[0].value, self.deck.cards[1].value
-	while a == b:
-		#TODO add logic to show cards as you see they are equal
-		random.shuffle(self.deck.cards)
-		a, b = self.deck.cards[0], self.deck.cards[1]
-	
-	if a.value > b.value:
-		self.playerA.firstPlayer = True 
-	else:
-		self.playerB.firstPlayer = True
 
 
 

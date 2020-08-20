@@ -21,7 +21,7 @@ export default {
         },
         methods: {
             register() {
-                axios({ method: "POST", "url": "http://127.0.0.1:5000/register", "data": this.input, "headers": { "content-type": "application/json, Authorization" } }).then(result => {
+                axios({ method: "POST", "url": "http://74.215.43.246:5000/register", "data": this.input, "headers": { "content-type": "application/json, Authorization" } }).then(result => {
                     if(result.status == 200){
                         this.$router.replace({ name: "login" });
                     }

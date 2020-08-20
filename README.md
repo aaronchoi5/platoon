@@ -1,5 +1,5 @@
-#Platoon
-##Rules
+# Platoon
+## Rules
 There are two different types of cards: Regular cards and Special cards
 Regular cards are those from the two to the queen. These are called the pawns. The cards from two to nine are wrth their face value, while the ten, jack and queen are each worth ten. 
 
@@ -15,4 +15,4 @@ The maximum number of special cards that can be in a single unit is two.
 
 In addition, you cannot include a king and a bishop in the same unit.
 
-##Setting Up the Server and Website
+## Setting Up the Server and Website

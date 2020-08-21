@@ -27,6 +27,9 @@ export default {
         position: absolute;
   		bottom: 10px;
   		height: 15%;
-  		width: 47%;
+  		width: 100%;
+        display: flex;
+        justify-content: center;
+        
       }
 </style>

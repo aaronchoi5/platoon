@@ -9,6 +9,7 @@
         <snackbar></snackbar>
             <div style="display: flex; justify-content: space-evenly">
                 <div v-for="(opponentPile, opponentPIndex) in opponentPiles" style='display: inline-block' @click="assignOPile(opponentPIndex)">
+                    <img class="imgCardHolder" v-bind:src= "require('../assets/cardframe.png')" width="70" height="120" style='margin-bottom: -7.75rem'/>
                     <img v-for= "index in opponentPiles[opponentPIndex]" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
                 </div>
             </div>
@@ -71,6 +72,7 @@ import gameOverModal from '@/components/gameOverModal.vue'
             this.connection.emit('get player cards', {'username': this.$store.state.username, 'gameId': this.$store.state.gameId})
 
             this.connection.on('Waiting', () =>{
+                //TODO: trigger some kind of waiting heading?
                 console.log('waiting')
             });
 
@@ -124,7 +126,9 @@ import gameOverModal from '@/components/gameOverModal.vue'
                 this.deleteInstancesOfCard(card)
 
                 if(pileId == "board-2"){
+                    this.deleteCardFromPile(this.cards,JSON.stringify(card))
                     this.cards.push(card)
+
                 }
                 else{
                     this.piles[pileId].push(card)

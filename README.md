@@ -3,6 +3,8 @@
 There are two different types of cards: Regular cards and Special cards
 Regular cards are those from the two to the queen. These are called the pawns. The cards from two to nine are wrth their face value, while the ten, jack and queen are each worth ten. 
 
+![](/frontend/src/assets/cardspic.png)
+
 Special Cards, meanwhile, come in three varieties: kings, bishops, and wizards. 
 
 If you have a king in your unit you will always win, regardless of the unit's total value. But if there are two units facing each other, both having kings, the unit with the highest total value of regular cards will win.

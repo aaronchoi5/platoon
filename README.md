@@ -1,4 +1,5 @@
 # Platoon
+Welcome to the wonderful world of platoon! I explain the rules on how to play below as well as how to setup the server.
 ## Rules
 There are two different types of cards: Regular cards and Special cards
 Regular cards are those from the two to the queen. These are called the pawns. The cards from two to nine are with their face value, while the ten, jack and queen are each worth ten. 

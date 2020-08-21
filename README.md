@@ -3,7 +3,7 @@
 There are two different types of cards: Regular cards and Special cards
 Regular cards are those from the two to the queen. These are called the pawns. The cards from two to nine are wrth their face value, while the ten, jack and queen are each worth ten. 
 
-![](/frontend/src/assets/cardspic.png)
+![pic](./frontend/src/assets/cardspic.png)
 
 Special Cards, meanwhile, come in three varieties: kings, bishops, and wizards. 
 

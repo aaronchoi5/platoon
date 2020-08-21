@@ -465,7 +465,5 @@ def resetDeck(game, player1, player2):
 	game.trickNum = 0
 	game.save()
 
-
-
 if __name__ == '__main__':
 	socketio.run(app, host='0.0.0.0')

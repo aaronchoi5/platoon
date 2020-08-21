@@ -8,20 +8,8 @@
         <gameOverModal v-if="gameover" :result="result"/>
         <snackbar></snackbar>
             <div style="display: flex; justify-content: space-evenly">
-                <div id="o1" style='display: inline-block' @click="assignOPile(0)">
-                    <img v-for= "index in oPile0" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
-                </div>
-                <div id="o2" style='display: inline-block' @click="assignOPile(1)">
-                    <img v-for= "index in oPile1" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
-                </div>
-                <div id="o3" style='display: inline-block' @click="assignOPile(2)">
-                    <img v-for= "index in oPile2" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
-                </div>
-                <div id="o4" style='display: inline-block' @click="assignOPile(3)">
-                    <img v-for= "index in oPile3" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
-                </div>
-                <div id="o5" style='display: inline-block' @click="assignOPile(4)">
-                    <img v-for= "index in oPile4" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
+                <div v-for="(opponentPile, opponentPIndex) in opponentPiles" style='display: inline-block' @click="assignOPile(opponentPIndex)">
+                    <img v-for= "index in opponentPiles[opponentPIndex]" v-bind:src= "require('../assets/tespaback.png')" width="70" height="120" style="display:block; margin-bottom: -6rem;"/>
                 </div>
             </div>
             <div style="display: flex; justify-content: space-evenly; margin-top: 6rem;">
@@ -59,11 +47,7 @@ import gameOverModal from '@/components/gameOverModal.vue'
                 connection: null,
                 cards: [],
                 piles: [[], [], [], [], []],
-                oPile0: 0,
-                oPile1: 0,
-                oPile2: 0,
-                oPile3: 0,
-                oPile4: 0,
+                opponentPiles: [0,0,0,0,0],
                 chosenPile: -1,
                 opponentPile: -1,
                 battleModalVisible: false,
@@ -93,133 +77,38 @@ import gameOverModal from '@/components/gameOverModal.vue'
             this.connection.on('Both Ready', (payload) =>{
                 this.authorized = payload['authorized']
                 let pileLengths = payload['piles']
-                this.oPile0 = pileLengths[0]
-                this.oPile1 = pileLengths[1]
-                this.oPile2 = pileLengths[2]
-                this.oPile3 = pileLengths[3]
-                this.oPile4 = pileLengths[4]
+                for(let i = 0; i < this.opponentPiles.length; i++){
+                    this.opponentPiles.splice(i, 1, pileLengths[i])
+                }
                 this.submitted = true
             });
 
             this.connection.on('loss', (payload) =>{
-                this.authorized = payload['authorized']
-                let pilesA = payload['pilesA']
-                for(let i = 0; i < this.piles.length; i++){
-                    this.piles[i] = pilesA[i]
-                }
-                let pileLengths = payload['pilesB']
-                this.oPile0 = pileLengths[0]
-                this.oPile1 = pileLengths[1]
-                this.oPile2 = pileLengths[2]
-                this.oPile3 = pileLengths[3]
-                this.oPile4 = pileLengths[4]
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
+                this.fightHandling(payload)
                 this.losses += 1
             });
 
             this.connection.on('win', (payload) =>{
-                this.authorized = payload['authorized']
-                let pilesA = payload['pilesA']
-                for(let i = 0; i < this.piles.length; i++){
-                    this.piles[i] = pilesA[i]
-                }
-                let pileLengths = payload['pilesB']
-                this.oPile0 = pileLengths[0]
-                this.oPile1 = pileLengths[1]
-                this.oPile2 = pileLengths[2]
-                this.oPile3 = pileLengths[3]
-                this.oPile4 = pileLengths[4]
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
+                this.fightHandling(payload)
                 this.wins += 1
             });
             this.connection.on('draw', (payload) =>{
-                this.authorized = payload['authorized']
-                let pilesA = payload['pilesA']
-                for(let i = 0; i < this.piles.length; i++){
-                    this.piles[i] = pilesA[i]
-                }
-
-                let pileLengths = payload['pilesB']
-                this.oPile0 = pileLengths[0]
-                this.oPile1 = pileLengths[1]
-                this.oPile2 = pileLengths[2]
-                this.oPile3 = pileLengths[3]
-                this.oPile4 = pileLengths[4]
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
+                this.fightHandling(payload)
                 this.draws += 1
             });
             this.connection.on('win reset', (payload) =>{
-                this.authorized = payload['authorized']
-                let newCards = payload['newCards']
-                for(var card in newCards){
-                    var temp = JSON.parse(newCards[card]);
-                    this.cards.push(temp);
-                }
-                this.oPile0 = 0
-                this.oPile1 = 0
-                this.oPile2 = 0
-                this.oPile3 = 0
-                this.oPile4 = 0
-                for(let i = 0; i < this.piles.length; i++){
-                    this.piles[i] = []
-                }
-
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
+                this.resetHandling(payload)
                 this.wins += 1
-                this.submitted = false
             });
 
             this.connection.on('loss reset', (payload) =>{
-                this.authorized = payload['authorized']
-                let newCards = payload['newCards']
-                for(var card in newCards){
-                    var temp = JSON.parse(newCards[card]);
-                    this.cards.push(temp);
-                }
-                this.oPile0 = 0
-                this.oPile1 = 0
-                this.oPile2 = 0
-                this.oPile3 = 0
-                this.oPile4 = 0
-                for(let i = 0; i < this.piles.length; i++){
-                    this.piles[i] = []
-                }
-
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
+                this.resetHandling(payload)
                 this.losses += 1
-                this.submitted = false
             });
             
             this.connection.on('draw reset', (payload) =>{
-                this.authorized = payload['authorized']
-                let newCards = payload['newCards']
-                for(var card in newCards){
-                    var temp = JSON.parse(newCards[card]);
-                    this.cards.push(temp);
-                }
-                this.oPile0 = 0
-                this.oPile1 = 0
-                this.oPile2 = 0
-                this.oPile3 = 0
-                this.oPile4 = 0
-                for(let i = 0; i < this.piles.length; i++){
-                    this.piles[i] = []
-                }
-                this.combatants[0] = this.combatants[1] = -1
-                this.chosenPile = -1
-                this.opponentPile = -1
+                this.resetHandling(payload)
                 this.draws += 1
-                this.submitted = false
             });
             this.connection.on('game over', (result) =>{
                 this.gameover = true
@@ -247,11 +136,9 @@ import gameOverModal from '@/components/gameOverModal.vue'
             },
             deleteInstancesOfCard(object){
                 var jsonobj = JSON.stringify(object)
-                this.deleteCardFromPile(this.piles[0],jsonobj)
-                this.deleteCardFromPile(this.piles[1],jsonobj)
-                this.deleteCardFromPile(this.piles[2],jsonobj)
-                this.deleteCardFromPile(this.piles[3],jsonobj)
-                this.deleteCardFromPile(this.piles[4],jsonobj)
+                for(let i = 0; i < this.piles.length; i++){
+                    this.deleteCardFromPile(this.piles[i],jsonobj)
+                }
             },
             deleteCardFromPile(pile, jsonobj){
                 for(let i = 0; i < pile.length; i++){
@@ -290,6 +177,38 @@ import gameOverModal from '@/components/gameOverModal.vue'
                 setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
                 this.chosenPile = -1
                 this.opponentPile = -1
+            },
+            fightHandling(payload){
+                this.authorized = payload['authorized']
+                let pilesA = payload['pilesA']
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = pilesA[i]
+                }
+                let pileLengths = payload['pilesB']
+                for(let i = 0; i < this.opponentPiles.length; i++){
+                    this.opponentPiles.splice(i, 1, pileLengths[i])
+                }
+                this.combatants[0] = this.combatants[1] = -1
+                this.chosenPile = -1
+                this.opponentPile = -1
+            },
+            resetHandling(payload){
+                this.authorized = payload['authorized']
+                let newCards = payload['newCards']
+                for(var card in newCards){
+                    var temp = JSON.parse(newCards[card]);
+                    this.cards.push(temp);
+                }
+                for(let i = 0; i < this.opponentPiles.length; i++){
+                    this.opponentPiles.splice(i, 1, 0)
+                }
+                for(let i = 0; i < this.piles.length; i++){
+                    this.piles[i] = []
+                }
+                this.combatants[0] = this.combatants[1] = -1
+                this.chosenPile = -1
+                this.opponentPile = -1
+                this.submitted = false
             }
         }
     }

@@ -18,7 +18,7 @@ The maximum number of special cards that can be in a single unit is two.
 
 In addition, you cannot include a king and a bishop in the same unit.
 
-Both players draw ten cards, assigns at least one card to each unit and take turns(tricks) deciding which units fight. At the end of a round, whoever won the largest number of tricks wins the round. At the end of the game, whoever wond the largest amount of rounds wins the game.
+Both players draw ten cards, assigns at least one card to each unit and take turns(tricks) deciding which units fight. At the end of a round, whoever won the largest number of tricks wins the round. At the end of the game, whoever won the largest amount of rounds wins the game.
 
 ## Setting Up the Server and Website
 Setting up the server is rather easy! You will need to download MongoDB. Then it's a matter of activating the venv and running python app.py in the root directory. To serve up the client you'll need to run npm run serve in the frontend directory. You may need to change some of the axios routes so external users can call the backend.
